@@ -9,7 +9,7 @@
     <script>
       var generatePublicKeyLink = function() {
         var kBit = 512;
-        var passPhrase = $("#passPhrase").val();
+        var passPhrase = encodeURIComponent($("#passPhrase").val());
         var rsaKey = cryptico.generateRSAKey(passPhrase, kBit);
         var rsaPublicKey = cryptico.publicKeyString(rsaKey);
         showLink({mode: "generateEncryptedMsg", keyBit: kBit, rsaPublicKey: rsaPublicKey})
@@ -18,17 +18,17 @@
       var generateEncryptedMsgLink = function() {
         var rsaPublicKey = querystring.parse()["rsaPublicKey"];
         var keyBit = querystring.parse()["keyBit"];
-        var plainText = $("#plainText").val();
+        var plainText = encodeURIComponent($("#plainText").val());
         var encryptedText = cryptico.encrypt(plainText, rsaPublicKey).cipher;
         showLink({mode: "recoverMsg", keyBit: keyBit, encryptedText: encryptedText})
       }
       
       var recoverMsg = function() {
-        var passPhrase = $("#passPhrase").val();
+        var passPhrase = encodeURIComponent($("#passPhrase").val());
         var keyBit = parseInt(querystring.parse()["keyBit"]);
         var rsaKey = cryptico.generateRSAKey(passPhrase, keyBit);
         var encryptedText = querystring.parse()["encryptedText"];
-        var plainText = cryptico.decrypt(encryptedText, rsaKey).plaintext;
+        var plainText = decodeURIComponent(cryptico.decrypt(encryptedText, rsaKey).plaintext);
         $("#plainText").val(plainText);
         $("#plainTextDiv").show();
       }
