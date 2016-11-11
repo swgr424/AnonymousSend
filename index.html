@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>匿名传话</title>
+    <script src="js/cryptico.min.js"></script>
+    <script src="js/querystring.js"></script>
+    <script src="js/clipboard.min.js"></script>
+    <script src="js/jquery-3.1.1.min.js"></script>
+    <script>
+      var generatePublicKeyLink = function() {
+        var kBit = 512;
+        var passPhrase = $("#passPhrase").val();
+        var rsaKey = cryptico.generateRSAKey(passPhrase, kBit);
+        var rsaPublicKey = cryptico.publicKeyString(rsaKey);
+        showLink({mode: "generateEncryptedMsg", keyBit: kBit, rsaPublicKey: rsaPublicKey})
+      }
+      
+      var generateEncryptedMsgLink = function() {
+        var rsaPublicKey = querystring.parse()["rsaPublicKey"];
+        var keyBit = querystring.parse()["keyBit"];
+        var plainText = $("#plainText").val();
+        var encryptedText = cryptico.encrypt(plainText, rsaPublicKey).cipher;
+        showLink({mode: "recoverMsg", keyBit: keyBit, encryptedText: encryptedText})
+      }
+      
+      var recoverMsg = function() {
+        var passPhrase = $("#passPhrase").val();
+        var keyBit = parseInt(querystring.parse()["keyBit"]);
+        var rsaKey = cryptico.generateRSAKey(passPhrase, keyBit);
+        var encryptedText = querystring.parse()["encryptedText"];
+        var plainText = cryptico.decrypt(encryptedText, rsaKey).plaintext;
+        $("#plainText").val(plainText);
+        $("#plainTextDiv").show();
+      }
+      
+      var showLink = function(params) {
+        var url = location.origin + location.pathname + "?" + querystring.stringify(params);
+        showLinkUrl(url);
+        generateShortUrl(url);
+      }
+
+      var showLinkUrl = function(url) {
+        $("#link").attr("href", url);
+        $("#linkInput").val(url);
+        new Clipboard('.btn');
+        $("#linkDiv").show();
+      }
+
+      var generateShortUrl = function(url) {
+        $.ajax({
+          type: "GET",
+          dataType: 'jsonp',
+          url: "https://50r.me/urls/add.jsonp?url=" + encodeURIComponent(url),
+          success: function(data) {
+            if (data.error === null) {
+              showLinkUrl(data.url);
+            }
+          }});
+      }
+      
+      var prepareMode = function() {
+        var mode = querystring.parse()["mode"] || "generatePublicKey";
+        if (mode == "generatePublicKey") {
+          $("#passPhraseHint").text("先设置一个密码：");
+          $("#plainTextDiv").hide();
+          $("#recoverMsgButton").hide();
+          $("#linkDiv").hide();
+          $("#separator1").hide();
+          generateLink = generatePublicKeyLink;
+        }
+        else if (mode == "generateEncryptedMsg") {
+          $("#plainTextHint").text("输入你要传递的消息：");
+          $("#passPhraseDiv").hide();
+          $("#recoverMsgButton").hide();
+          $("#linkDiv").hide();
+          $("#separator1").hide();
+          generateLink = generateEncryptedMsgLink;
+        }
+        else if (mode == "recoverMsg") {
+          $("#passPhraseHint").text("输入之前设置的密码：");
+          $("#plainTextHint").text("对方想说的是：");
+          $("#generateLinkBtn").hide();
+          $("#plainTextDiv").hide();
+          $("#linkDiv").hide();
+          $("#separator2").hide();
+        }
+      }
+      
+      window.onload = prepareMode;
+    </script>
+  </head>
+  <body =>
+    <div id="passPhraseDiv"><span id="passPhraseHint"></span><input type="text" id="passPhrase"></div>
+    <button id="recoverMsgButton" onclick="recoverMsg()">恢复明文</button>
+    <hr id="separator1">
+    <div id="plainTextDiv"><span id="plainTextHint"></span><br/><textarea id="plainText" cols=80 rows=10></textarea></div>
+    <div id="generateLinkDiv"><button id="generateLinkBtn" onclick="generateLink()">生成链接</button></div>
+    <hr id="separator2">
+    <div id="linkDiv">然后，把 <a id="link">这个链接</a> 发给对方：<input id="linkInput">
+      <button class="btn" data-clipboard-target="#linkInput">
+        <img src="clippy.svg" alt="复制到剪贴板" width=15 height=15>
+      </button>
+    </div>
+  </body>
+</html>
