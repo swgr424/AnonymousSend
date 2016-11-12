@@ -10,6 +10,7 @@
       var generatePublicKeyLink = function() {
         var kBit = 512;
         var passPhrase = encodeURIComponent($("#passPhrase").val());
+        localStorage["anonymous_send_pass_phrase"] = passPhrase;
         var rsaKey = cryptico.generateRSAKey(passPhrase, kBit);
         var rsaPublicKey = cryptico.publicKeyString(rsaKey);
         showLink({mode: "generateEncryptedMsg", keyBit: kBit, rsaPublicKey: rsaPublicKey})
@@ -22,15 +23,20 @@
         var encryptedText = cryptico.encrypt(plainText, rsaPublicKey).cipher;
         showLink({mode: "recoverMsg", keyBit: keyBit, encryptedText: encryptedText})
       }
-      
+
       var recoverMsg = function() {
         var passPhrase = encodeURIComponent($("#passPhrase").val());
+        var plainText = recoverPlainText(passPhrase);
+        $("#plainText").val(plainText);
+        $("#plainTextDiv").show();
+      }
+
+      var recoverPlainText = function(passPhrase) {
         var keyBit = parseInt(querystring.parse()["keyBit"]);
         var rsaKey = cryptico.generateRSAKey(passPhrase, keyBit);
         var encryptedText = querystring.parse()["encryptedText"];
         var plainText = decodeURIComponent(cryptico.decrypt(encryptedText, rsaKey).plaintext);
-        $("#plainText").val(plainText);
-        $("#plainTextDiv").show();
+        return plainText;
       }
       
       var showLink = function(params) {
@@ -57,11 +63,15 @@
             }
           }});
       }
-      
+
       var prepareMode = function() {
         var mode = querystring.parse()["mode"] || "generatePublicKey";
         if (mode == "generatePublicKey") {
           $("#passPhraseHint").text("先设置一个密码：");
+          var previousPassPhrase = localStorage["anonymous_send_pass_phrase"];
+          if (previousPassPhrase !== undefined) {
+            $("#passPhrase").val(previousPassPhrase);
+          }
           $("#plainTextDiv").hide();
           $("#recoverMsgButton").hide();
           $("#linkDiv").hide();
@@ -77,15 +87,33 @@
           generateLink = generateEncryptedMsgLink;
         }
         else if (mode == "recoverMsg") {
-          $("#passPhraseHint").text("输入之前设置的密码：");
-          $("#plainTextHint").text("对方想说的是：");
-          $("#generateLinkBtn").hide();
-          $("#plainTextDiv").hide();
-          $("#linkDiv").hide();
-          $("#separator2").hide();
+          var skipPassPhraseInput = false;
+          var previousPassPhrase = localStorage["anonymous_send_pass_phrase"];
+          if (previousPassPhrase !== undefined) {
+            var plainText = recoverPlainText(previousPassPhrase);
+            console.log(plainText);
+            if (plainText !== "undefined") {
+              skipPassPhraseInput = true;
+              $("#passPhraseHint").text("你之前设置的密码：");
+              $("#passPhrase").val(previousPassPhrase);
+              $("#plainTextHint").text("对方想说的是：");
+              $("#plainText").val(plainText);
+              $("#generateLinkBtn").hide();
+              $("#linkDiv").hide();
+              $("#separator2").hide();
+            }
+          }
+          if (!skipPassPhraseInput) {
+            $("#passPhraseHint").text("输入之前设置的密码：");
+            $("#plainTextHint").text("对方想说的是：");
+            $("#generateLinkBtn").hide();
+            $("#plainTextDiv").hide();
+            $("#linkDiv").hide();
+            $("#separator2").hide();
+          }
         }
       }
-      
+
       window.onload = prepareMode;
     </script>
   </head>
